@@ -1,0 +1,1 @@
+export default function Forbidden(){return <div className="mx-auto mt-20 max-w-lg text-center"><div className="text-6xl font-black">403</div><p className="mt-3 text-slate-500">You do not have permission to access this area.</p></div>}

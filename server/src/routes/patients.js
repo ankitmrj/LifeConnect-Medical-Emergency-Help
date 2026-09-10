@@ -1,0 +1,2 @@
+import { Router } from 'express'; import { authenticateUser,authorizeRoles } from '../middleware/auth.js'; import { asyncHandler } from '../utils/errors.js'; import {getProfile,updateProfile,addContact,history} from '../controllers/patientController.js';
+const r=Router(); r.use(authenticateUser,authorizeRoles('patient')); r.get('/profile',asyncHandler(getProfile)); r.put('/profile',asyncHandler(updateProfile)); r.post('/emergency-contact',asyncHandler(addContact)); r.get('/emergency-history',asyncHandler(history)); export default r;

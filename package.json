@@ -1,0 +1,15 @@
+{
+  "name": "lifeconnect",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": ["client", "server"],
+  "scripts": {
+    "dev": "concurrently \"npm:server:dev\" \"npm:client:dev\"",
+    "server:dev": "npm --workspace server run dev",
+    "client:dev": "npm --workspace client run dev",
+    "seed": "npm --workspace server run seed",
+    "migrate:antivenom": "npm --workspace server run migrate:antivenom",
+    "test": "npm --workspace server test"
+  },
+  "devDependencies": { "concurrently": "^9.1.2" }
+}
