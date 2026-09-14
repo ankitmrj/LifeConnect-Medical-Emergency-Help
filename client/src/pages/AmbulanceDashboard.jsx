@@ -1,2 +1,189 @@
-import {useEffect,useState} from 'react';import {api} from '../services/api';import {useSocket} from '../hooks/useSocket';import {Navigation,MapPinned} from 'lucide-react';import MapView from '../components/MapView';
-export default function AmbulanceDashboard(){const [a,setA]=useState(null),[e,setE]=useState(null),[msg,setMsg]=useState('');useEffect(()=>{api.get('/ambulances').then(r=>{const x=r.data.data.ambulances.find(v=>v.userId===JSON.parse(localStorage.getItem('lc_user')).id)||r.data.data.ambulances[0];setA(x);});},[]);useSocket({'ambulance:assigned':x=>{setE(x.emergency);setA(x.ambulance);setMsg('New assignment received');}});const locate=()=>navigator.geolocation?.getCurrentPosition(p=>api.patch(`/ambulances/${a._id}/location`,{lat:p.coords.latitude,lng:p.coords.longitude}).then(r=>setA(r.data.data.ambulance)));const status=s=>api.patch(`/ambulances/${a._id}/status`,{status:s}).then(r=>setA(r.data.data.ambulance));return <div className="space-y-6"><div><h1 className="text-3xl font-black">Ambulance dashboard</h1><p className="text-slate-500">{a?.vehicleNumber||'Loading vehicle…'}</p></div>{msg&&<div className="rounded-xl bg-emerald-50 p-4 text-emerald-800">{msg}</div>}<section className="rounded-3xl border bg-white p-6 shadow-sm"><div className="flex items-center gap-2"><Navigation className="text-red-600"/><h2 className="text-xl font-black">Current assignment</h2></div><div className="mt-5 grid gap-4 md:grid-cols-2"><div><div className="text-sm text-slate-500">Status</div><div className="text-2xl font-black">{a?.status||'—'}</div></div><div><div className="text-sm text-slate-500">Destination</div><div className="font-bold">{e?.destinationLocation?'Hospital destination active':'Waiting for assignment'}</div></div></div><div className="mt-5 flex flex-wrap gap-2"><button onClick={locate} className="rounded-lg border px-3 py-2">Send current location</button>{['EN_ROUTE','ARRIVED','TRANSPORTING','COMPLETED'].map(s=><button key={s} onClick={()=>status(s)} className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-bold text-white">{s}</button>)}{a&&<button onClick={()=>api.post(`/ambulances/${a._id}/simulate`)} className="rounded-lg bg-red-600 px-3 py-2 text-sm font-bold text-white">Demo movement</button>}</div></section>{a?.currentLocation&&<section className="rounded-3xl border bg-white p-4"><MapView center={[a.currentLocation.coordinates[1],a.currentLocation.coordinates[0]]} ambulance={a.currentLocation.coordinates}/></section>}<section className="rounded-3xl bg-slate-950 p-6 text-white"><div className="flex items-center gap-2"><MapPinned/><span className="font-bold">Safety note</span></div><p className="mt-2 text-sm text-slate-300">Demo movement uses interpolated coordinates. It is intentionally labeled as simulation rather than a live road-network ETA.</p></section></div>}
+import { useEffect, useState } from "react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+import { Users, Hospital, Ambulance, Activity } from "lucide-react";
+
+import { api } from "../services/api";
+import StatCard from "../components/StatCard";
+
+export default function AdminDashboard() {
+  // -----------------------------
+  // State
+  // -----------------------------
+  const [stats, setStats] = useState(null);
+  const [hospitals, setHospitals] = useState([]);
+
+  // -----------------------------
+  // Load dashboard data
+  // -----------------------------
+  const loadDashboard = () => {
+    return Promise.all([
+      api.get("/admin/stats"),
+      api.get("/admin/hospitals"),
+    ]).then(([statsResponse, hospitalsResponse]) => {
+      setStats(statsResponse.data.data);
+      setHospitals(hospitalsResponse.data.data.hospitals);
+    });
+  };
+
+  // -----------------------------
+  // Initial API call
+  // -----------------------------
+  useEffect(() => {
+    loadDashboard();
+  }, []);
+
+  // -----------------------------
+  // Chart data
+  // -----------------------------
+  const chartData = stats
+    ? [
+        {
+          name: "Patients",
+          value: stats.patients,
+        },
+        {
+          name: "Hospitals",
+          value: stats.hospitals,
+        },
+        {
+          name: "Ambulances",
+          value: stats.ambulances,
+        },
+        {
+          name: "Active",
+          value: stats.activeEmergencies,
+        },
+        {
+          name: "Completed",
+          value: stats.completedEmergencies,
+        },
+      ]
+    : [];
+
+  // -----------------------------
+  // Pending hospitals
+  // -----------------------------
+  const pendingHospitals = hospitals.filter(
+    (hospital) => !hospital.isVerified
+  );
+
+  // -----------------------------
+  // Verify hospital
+  // -----------------------------
+  const verifyHospital = (hospitalId) => {
+    api
+      .patch(`/admin/hospitals/${hospitalId}/verify`)
+      .then(() => loadDashboard());
+  };
+
+  // -----------------------------
+  // Render
+  // -----------------------------
+  return (
+    <div className="space-y-6">
+      {stats && (
+        <>
+          {/* Header */}
+          <div>
+            <h1 className="text-3xl font-black">
+              Admin Control Center
+            </h1>
+
+            <p className="text-slate-500">
+              Platform overview and verification
+            </p>
+          </div>
+
+          {/* Statistics */}
+          <div className="grid gap-4 md:grid-cols-4">
+            <StatCard
+              label="Users"
+              value={stats.users}
+              icon={Users}
+            />
+
+            <StatCard
+              label="Hospitals"
+              value={stats.hospitals}
+              icon={Hospital}
+            />
+
+            <StatCard
+              label="Ambulances"
+              value={stats.ambulances}
+              icon={Ambulance}
+            />
+
+            <StatCard
+              label="Active Emergencies"
+              value={stats.activeEmergencies}
+              icon={Activity}
+            />
+          </div>
+
+          {/* Platform Snapshot */}
+          <div className="rounded-3xl border bg-white p-6 shadow-sm">
+            <h2 className="font-black">
+              Platform Snapshot
+            </h2>
+
+            <div className="mt-5 h-64">
+              <ResponsiveContainer
+                width="100%"
+                height="100%"
+              >
+                <BarChart data={chartData}>
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+
+                  <Bar dataKey="value" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Hospital Verification */}
+          <section className="rounded-3xl border bg-white p-6 shadow-sm">
+            <h2 className="text-xl font-black">
+              Hospital Verification
+            </h2>
+
+            <div className="mt-4 space-y-3">
+              {pendingHospitals.map((hospital) => (
+                <div
+                  key={hospital._id}
+                  className="flex items-center justify-between rounded-xl border p-4"
+                >
+                  <span>{hospital.name}</span>
+
+                  <button
+                    onClick={() =>
+                      verifyHospital(hospital._id)
+                    }
+                    className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-bold text-white"
+                  >
+                    Verify
+                  </button>
+                </div>
+              ))}
+
+              {pendingHospitals.length === 0 && (
+                <div className="text-slate-500">
+                  No pending verifications.
+                </div>
+              )}
+            </div>
+          </section>
+        </>
+      )}
+    </div>
+  );
+}

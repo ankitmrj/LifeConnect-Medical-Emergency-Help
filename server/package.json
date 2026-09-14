@@ -8,6 +8,7 @@
     "start": "node src/server.js",
     "seed": "node src/utils/seed.js",
     "migrate:antivenom": "node src/utils/migrateAntivenom.js",
+    "migrate:remove-hospital-score": "node src/utils/migrateRemoveHospitalScore.js",
     "test": "node --test"
   },
   "dependencies": {

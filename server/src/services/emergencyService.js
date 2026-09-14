@@ -4,19 +4,35 @@ import Ambulance from '../models/Ambulance.js';
 import PatientProfile from '../models/PatientProfile.js';
 import EmergencyRequest from '../models/EmergencyRequest.js';
 import { haversineKm, toPoint } from '../utils/geo.js';
-import { scoreHospital } from './ranking.js';
+import { calculateRankingValue } from './ranking.js';
 import { dijkstra, reconstructPath } from '../algorithms/dijkstra.js';
 import { AppError } from '../utils/errors.js';
 
-export async function findRankedHospitals(lat, lng, radiusKm=25, requiredDepartment, emergencyType) {
+export async function findRankedHospitals(lat, lng, radiusKm=25, requiredDepartment, emergencyType, requestedResources = [], bloodGroup) {
   const hospitals = await Hospital.find({ location: { $near: { $geometry: toPoint(lat, lng), $maxDistance: radiusKm*1000 } }, isVerified: true }).lean();
   const ids = hospitals.map(h => h._id);
   const ambulances = await Ambulance.find({ hospitalId: { $in: ids }, status: 'AVAILABLE' }).lean();
   const counts = new Map(ids.map(id => [String(id), 0])); ambulances.forEach(a => counts.set(String(a.hospitalId), (counts.get(String(a.hospitalId)) || 0)+1));
-  return hospitals.map(h => {
+  const rankedHospitals = hospitals.map(h => {
     const [hLng,hLat] = h.location.coordinates; const distanceKm = haversineKm({lat,lng},{lat:hLat,lng:hLng}); const ambulanceAvailable = (counts.get(String(h._id)) || 0) > 0;
-    return { ...h, distanceKm: Number(distanceKm.toFixed(2)), score: scoreHospital({ distanceKm, hospital: h, ambulanceAvailable, requiredDepartment, emergencyType }), ambulanceAvailable };
-  }).sort((a,b) => b.score-a.score || a.distanceKm-b.distanceKm);
+    const { score: _legacyScore, rankingScore: _legacyRankingScore, hospitalScore: _legacyHospitalScore, ...hospital } = h;
+    return { ...hospital, distanceKm: Number(distanceKm.toFixed(2)), _rankingValue: calculateRankingValue({ distanceKm, hospital, ambulanceAvailable, requiredDepartment, emergencyType, requestedResources, bloodGroup }), ambulanceAvailable, bloodAvailable: bloodGroup ? Number(h.bloodBank?.[bloodGroup] || 0) > 0 : false };
+  });
+  return rankHospitals(rankedHospitals, requestedResources).map(({ _rankingValue, ...hospital }) => hospital);
+}
+
+export function rankHospitals(hospitals, requestedResources = []) {
+  const antivenomRequested = requestedResources.includes('ANTIVENOM');
+  return hospitals.sort((a, b) => {
+    if (antivenomRequested) {
+      const aHasAntivenom = a.antivenomAvailable === true && Number(a.antivenomUnits) > 0;
+      const bHasAntivenom = b.antivenomAvailable === true && Number(b.antivenomUnits) > 0;
+      if (aHasAntivenom !== bHasAntivenom) return bHasAntivenom - aHasAntivenom;
+      if (a.emergencyAvailable !== b.emergencyAvailable) return Number(b.emergencyAvailable) - Number(a.emergencyAvailable);
+      return a.distanceKm - b.distanceKm || b._rankingValue - a._rankingValue;
+    }
+    return b._rankingValue - a._rankingValue || a.distanceKm - b.distanceKm;
+  });
 }
 
 function syntheticRoute(patient, hospital) {
@@ -27,17 +43,22 @@ function syntheticRoute(patient, hospital) {
   return { distanceKm: Number(result.distances[destination].toFixed(2)), estimatedMinutes: Math.max(1, Math.round(result.distances[destination]*2.2)), path, routingMode:'synthetic-demo-distance' };
 }
 
-export async function createSos({ patientId, lat, lng, emergencyType, description, priority, requiredDepartment }, io) {
+export async function createSos({ patientId, lat, lng, emergencyType, description, priority, requiredDepartment, requestedResources = [], bloodGroup, hospitalId }, io) {
   const active = await EmergencyRequest.findOne({ patientId, status: { $in: ['CREATED','SEARCHING_HOSPITAL','HOSPITAL_NOTIFIED','ACCEPTED','AMBULANCE_REQUESTED','AMBULANCE_ASSIGNED','AMBULANCE_EN_ROUTE','AMBULANCE_ARRIVED','PATIENT_PICKED_UP','PATIENT_DELIVERED'] } });
   if (active) throw new AppError('An active emergency already exists',409,'DUPLICATE_SOS');
   const profile = await PatientProfile.findOne({ userId: patientId });
   if (!profile) throw new AppError('Complete your medical profile before SOS',422,'PROFILE_REQUIRED');
-  const emergency = await EmergencyRequest.create({ patientId, emergencyType, description, priority: priority || 'HIGH', patientLocation: toPoint(lat,lng), status:'SEARCHING_HOSPITAL' });
+  const effectiveBloodGroup = profile.bloodGroup;
+  if (requestedResources.includes('BLOOD') && !['A+','A-','B+','B-','AB+','AB-','O+','O-'].includes(effectiveBloodGroup)) throw new AppError('Add a valid blood group before requesting blood',422,'BLOOD_GROUP_REQUIRED');
+  const emergency = await EmergencyRequest.create({ patientId, emergencyType, requestedResources, description, priority: priority || 'HIGH', patientLocation: toPoint(lat,lng), status:'SEARCHING_HOSPITAL' });
   io?.to(`user:${patientId}`).emit('emergency:created', emergency);
-  const ranked = await findRankedHospitals(lat,lng,50,requiredDepartment,emergencyType);
+  const ranked = await findRankedHospitals(lat,lng,50,requiredDepartment,emergencyType,requestedResources,effectiveBloodGroup);
   if (!ranked.length) { emergency.status='SEARCHING_HOSPITAL'; await emergency.save(); return { emergency, hospitals: [] }; }
+  const selected = hospitalId ? ranked.find(h => String(h._id) === String(hospitalId)) : null;
+  if (hospitalId && !selected) throw new AppError('Selected hospital is not available in the search results',422,'INVALID_HOSPITAL');
+  const notified = selected ? [selected] : ranked.slice(0,5);
   emergency.status='HOSPITAL_NOTIFIED'; await emergency.save();
-  for (const h of ranked.slice(0,5)) io?.to(`hospital:${h._id}`).emit('emergency:hospital-notified',{ emergencyId:emergency._id, priority:emergency.priority, distanceKm:h.distanceKm });
+  for (const h of notified) io?.to(`hospital:${h._id}`).emit('emergency:hospital-notified',{ emergencyId:emergency._id, priority:emergency.priority, distanceKm:h.distanceKm });
   io?.to(`user:${patientId}`).emit('emergency:hospital-notified',{ emergencyId:emergency._id, hospitals:ranked.slice(0,5) });
   return { emergency, hospitals: ranked.slice(0,5) };
 }
