@@ -6,17 +6,30 @@ export function calculateRankingValue({ distanceKm, hospital, ambulanceAvailable
   const dept = requiredDepartment && hospital.departments?.some(d => d.toLowerCase() === requiredDepartment.toLowerCase()) ? 1 : 0.5;
   const baseResources = Math.min(1, (hospital.icuAvailable ? 0.35 : 0) + (hospital.oxygenAvailable ? 0.35 : 0) + Math.min(0.3, hospital.availableBeds / Math.max(1, hospital.totalBeds) * 0.3));
   const venomEmergency = requestedResources.includes('ANTIVENOM') || /snake|bite|venom|poison/i.test(emergencyType || '');
-  const bloodAvailable = bloodGroup ? Number(hospital.bloodBank?.[bloodGroup] || 0) > 0 : false;
+  const bloodAvailable = bloodGroup ? hasCompatibleBlood(hospital.bloodBank, bloodGroup) : false;
   const requestedAvailability = requestedResources.length
     ? requestedResources.filter(resource => ({
         ANTIVENOM: hospital.antivenomAvailable && hospital.antivenomUnits > 0,
         BLOOD: bloodAvailable,
         AMBULANCE: ambulanceAvailable,
-        ICU_BED: hospital.icuAvailable && hospital.availableBeds > 0
+        ICU_BED: hospital.icuAvailable && hospital.availableBeds > 0,
+        ICU: hospital.icuAvailable,
+        BED: hospital.availableBeds > 0,
+        OXYGEN: hospital.oxygenAvailable
       })[resource]).length / requestedResources.length
     : baseResources;
   const resources = venomEmergency ? 0.5 * baseResources + 0.5 * (hospital.antivenomAvailable && hospital.antivenomUnits > 0 ? 1 : 0) : requestedResources.length ? requestedAvailability : baseResources;
   const ambulance = ambulanceAvailable ? 1 : 0;
   const rankingValue = rankingWeights.distance*distanceScore + rankingWeights.availability*availability + rankingWeights.emergency*emergency + rankingWeights.resources*(0.5*resources+0.5*dept) + rankingWeights.ambulance*ambulance;
   return Number(rankingValue.toFixed(4));
+}
+
+const compatibleBloodGroups = {
+  'A+': ['A+', 'A-'], 'A-': ['A-'], 'B+': ['B+', 'B-'], 'B-': ['B-'],
+  'AB+': ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'], 'AB-': ['A-', 'B-', 'AB-', 'O-'],
+  'O+': ['O+', 'O-'], 'O-': ['O-']
+};
+
+export function hasCompatibleBlood(bloodBank = {}, bloodGroup) {
+  return (compatibleBloodGroups[bloodGroup] || [bloodGroup]).some(group => Number(bloodBank?.[group] || 0) > 0);
 }

@@ -1,82 +1,40 @@
 import { Link } from "react-router-dom";
-import {
-  Siren,
-  MapPinned,
-  Radio,
-  ShieldCheck,
-} from "lucide-react";
+import { Activity, Ambulance, ArrowRight, Bed, Check, ChevronRight, CircleDot, Droplets, HeartPulse, Hospital, MapPin, Menu, Radio, ShieldCheck, ShieldPlus, Siren, Stethoscope, X } from "lucide-react";
+import { useState } from "react";
+import { useAuth } from "../context/AuthContext";
+
+const resources = [
+  [ShieldPlus, "Antivenom", "Find hospitals with available antivenom stock", "red"],
+  [Droplets, "Blood", "Find hospitals based on blood-bank availability", "blue"],
+  [Ambulance, "Ambulance", "Find nearby emergency ambulance support", "amber"],
+  [Bed, "ICU / Bed", "Find hospitals with critical-care and bed availability", "emerald"],
+];
+const capabilities = [[Bed, "Available beds"], [Activity, "ICU"], [Stethoscope, "Oxygen"], [Droplets, "Blood bank"], [ShieldPlus, "Antivenom"], [Siren, "Emergency support"], [Ambulance, "Ambulance"]];
+const roles = [[HeartPulse, "Patient", "Find the right emergency resources and hospitals.", "/patient"], [Hospital, "Hospital", "Manage resources and respond to emergency requests.", "/hospital"], [Ambulance, "Ambulance", "Manage availability and emergency assignments.", "/ambulance"], [ShieldCheck, "Admin", "Manage and monitor the platform.", "/admin"]];
+const demos = [[HeartPulse, "Patient Demo", "Search resources, manage your medical profile and send an SOS."], [Hospital, "Hospital Demo", "Review incoming emergencies and keep resource availability current."], [Ambulance, "Ambulance Demo", "Manage availability and coordinate emergency assignments."], [ShieldCheck, "Admin Demo", "Monitor platform activity and hospital verification."]];
+
+function Eyebrow({ children }) { return <div className="mb-4 flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-red-600"><span className="h-2 w-2 rounded-full bg-red-600" />{children}</div>; }
 
 export default function Home() {
-  // -----------------------------
-  // Feature cards
-  // -----------------------------
-  const features = [
-    [MapPinned, "Geo-aware"],
-    [Radio, "Real-time"],
-    [ShieldCheck, "RBAC"],
-    [Siren, "One-tap SOS"],
-  ];
-
-  // -----------------------------
-  // Render
-  // -----------------------------
-  return (
-    <div className="overflow-hidden rounded-3xl bg-slate-950 p-8 text-white md:p-14">
-      {/* Hero Content */}
-      <div className="max-w-3xl">
-        {/* Platform Label */}
-        <div className="flex items-center gap-2 text-red-400">
-          <Siren />
-          Emergency coordination platform
-        </div>
-
-        {/* Heading */}
-        <h1 className="mt-5 text-5xl font-black tracking-tight md:text-7xl">
-          One SOS.
-          <br />
-          Many lives connected.
-        </h1>
-
-        {/* Description */}
-        <p className="mt-6 max-w-2xl text-lg text-slate-300">
-          LifeConnect links patients, hospitals and ambulances
-          with location-aware emergency routing and real-time
-          response tracking.
-        </p>
-
-        {/* Actions */}
-        <div className="mt-8 flex flex-wrap gap-3">
-          <Link
-            to="/register"
-            className="rounded-xl bg-red-600 px-6 py-3 font-bold"
-          >
-            Get started
-          </Link>
-
-          <Link
-            to="/login"
-            className="rounded-xl border border-white/20 px-6 py-3 font-bold"
-          >
-            Open demo
-          </Link>
-        </div>
-      </div>
-
-      {/* Features */}
-      <div className="mt-12 grid gap-4 md:grid-cols-4">
-        {features.map(([Icon, title]) => (
-          <div
-            key={title}
-            className="rounded-2xl border border-white/10 bg-white/5 p-5"
-          >
-            <Icon className="text-red-400" />
-
-            <div className="mt-3 font-bold">
-              {title}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+  const { user } = useAuth();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const dashboard = user?.role === "patient" ? "/patient" : user ? `/${user.role}` : "/login";
+  const emergencyTarget = user ? dashboard : "/login";
+  const closeMenu = () => setMenuOpen(false);
+  return <div className="-mx-4 -mt-6 overflow-hidden bg-[#f7fafc] text-slate-900 md:-mx-6">
+    <nav className="border-b border-slate-200/80 bg-white/90 px-4 py-4 backdrop-blur md:px-10"><div className="mx-auto flex max-w-7xl items-center justify-between"><Link to="/" className="flex items-center gap-3" onClick={closeMenu}><span className="grid h-10 w-10 place-items-center rounded-xl bg-red-600 text-white shadow-lg shadow-red-600/20"><HeartPulse size={22} /></span><span><span className="block text-lg font-black leading-none tracking-tight">LifeConnect</span><span className="mt-1 block text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Medical emergency help</span></span></Link><div className={`${menuOpen ? "absolute left-4 right-4 top-[76px] z-30 flex" : "hidden"} flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-xl md:static md:flex md:flex-row md:items-center md:gap-7 md:border-0 md:bg-transparent md:p-0 md:shadow-none`}><a href="#how-it-works" onClick={closeMenu} className="text-sm font-bold text-slate-600 hover:text-slate-950">How it works</a><a href="#resources" onClick={closeMenu} className="text-sm font-bold text-slate-600 hover:text-slate-950">Emergency resources</a><a href="#network" onClick={closeMenu} className="text-sm font-bold text-slate-600 hover:text-slate-950">Hospitals</a>{user ? <Link to={dashboard} className="text-sm font-bold text-slate-600 hover:text-slate-950">Dashboard</Link> : <><Link to="/login" className="text-sm font-bold text-slate-600 hover:text-slate-950">Login</Link><Link to="/register" className="text-sm font-bold text-slate-600 hover:text-slate-950">Register</Link></>}<Link to={emergencyTarget} className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-black text-white shadow-lg shadow-red-600/20"><Siren size={16} />Emergency help</Link></div><button type="button" aria-label={menuOpen ? "Close menu" : "Open menu"} className="rounded-lg p-2 md:hidden" onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? <X /> : <Menu />}</button></div></nav>
+    <main>
+      <section className="relative overflow-hidden px-4 pb-20 pt-16 md:px-10 md:pb-28 md:pt-24"><div className="pointer-events-none absolute -right-24 -top-28 h-96 w-96 rounded-full bg-red-100/70 blur-3xl" /><div className="relative mx-auto grid max-w-7xl items-center gap-14 lg:grid-cols-[1.05fr_.95fr]"><div><div className="mb-6 inline-flex items-center gap-2 rounded-full border border-red-200 bg-white px-3 py-2 text-xs font-black uppercase tracking-[0.16em] text-red-700 shadow-sm"><span className="h-2 w-2 animate-pulse rounded-full bg-red-500" />Emergency coordination platform</div><h1 className="max-w-3xl text-5xl font-black leading-[0.98] tracking-[-0.04em] text-slate-950 md:text-7xl">Emergency help when <span className="text-red-600">every second matters.</span></h1><p className="mt-7 max-w-xl text-lg leading-8 text-slate-600">Find nearby hospitals, critical medical resources and emergency assistance based on what you actually need.</p><div className="mt-9 flex flex-wrap gap-3"><Link to={emergencyTarget} className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-5 py-3.5 font-black text-white shadow-xl shadow-red-600/20">Get emergency help <ArrowRight size={18} /></Link><a href="#network" className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-5 py-3.5 font-black text-slate-800">Explore hospitals <ChevronRight size={18} /></a></div><div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-xs font-bold text-slate-500"><span className="flex items-center gap-2"><Check size={15} className="text-emerald-600" />Real-time coordination</span><span className="flex items-center gap-2"><Check size={15} className="text-emerald-600" />Resource-aware matching</span></div></div><div className="relative mx-auto w-full max-w-lg"><div className="absolute -inset-4 rounded-[2rem] bg-red-100/60 blur-2xl" /><div className="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-slate-950 p-5 text-white shadow-2xl md:p-7"><div className="flex items-center justify-between border-b border-white/10 pb-5"><div><p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Emergency center</p><p className="mt-1 text-xl font-black">Resource match preview</p></div><span className="flex items-center gap-2 rounded-full bg-emerald-400/10 px-3 py-1.5 text-xs font-bold text-emerald-300"><span className="h-2 w-2 rounded-full bg-emerald-400" />Live network</span></div><div className="relative my-7 h-56 overflow-hidden rounded-2xl border border-white/10 bg-[#172337] bg-[linear-gradient(rgba(255,255,255,.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.05)_1px,transparent_1px)] bg-[size:32px_32px]"><div className="absolute left-[18%] top-[56%] h-32 w-32 rounded-full border border-red-400/30" /><div className="absolute left-[18%] top-[56%] h-20 w-20 rounded-full border border-red-400/30" /><div className="absolute left-[23%] top-[62%] h-4 w-4 rounded-full bg-blue-400 ring-4 ring-blue-400/20"><span className="sr-only">Patient location</span></div><div className="absolute left-[59%] top-[26%] flex h-10 w-10 items-center justify-center rounded-xl bg-red-500 shadow-lg shadow-red-500/40"><Hospital size={20} /></div><div className="absolute left-[72%] top-[65%] flex h-9 w-9 items-center justify-center rounded-xl bg-amber-400 text-slate-950"><Ambulance size={18} /></div><svg className="absolute inset-0 h-full w-full" viewBox="0 0 400 224" aria-hidden="true"><path d="M94 144 C165 142, 195 70, 252 73" fill="none" stroke="#f87171" strokeDasharray="7 7" strokeWidth="2" /></svg><div className="absolute bottom-3 left-3 flex gap-3 rounded-lg bg-slate-950/80 px-3 py-2 text-[10px] font-bold text-slate-300"><span className="flex items-center gap-1"><CircleDot size={11} className="text-blue-400" />You</span><span className="flex items-center gap-1"><MapPin size={11} className="text-red-400" />Hospital</span></div></div><div className="rounded-xl bg-white/10 p-4"><div className="flex items-center justify-between"><span className="text-xs font-bold uppercase tracking-widest text-slate-400">Requested resource</span><span className="rounded-full bg-red-500/20 px-2 py-1 text-[10px] font-black text-red-300">ANTIVENOM</span></div><div className="mt-4 flex items-center justify-between"><div><p className="font-black">Hospital A</p><p className="mt-1 text-xs text-slate-400">Resource available · 8 units</p></div><span className="text-sm font-bold text-emerald-300">Recommended</span></div></div></div></div></div></section>
+      <section id="resources" className="scroll-mt-20 border-y border-slate-200 bg-white px-4 py-20 md:px-10"><div className="mx-auto max-w-7xl"><Eyebrow>Start with what you need</Eyebrow><div className="flex flex-col justify-between gap-5 md:flex-row md:items-end"><div><h2 className="text-3xl font-black tracking-tight md:text-5xl">What emergency help do you need?</h2><p className="mt-3 max-w-xl text-slate-600">Choose a resource and find suitable nearby hospitals. Sign in to use the patient emergency workflow.</p></div><Link to={emergencyTarget} className="inline-flex items-center gap-2 font-black text-red-600">Open emergency center <ArrowRight size={17} /></Link></div><div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{resources.map(([Icon, label, description, tone]) => <Link key={label} to={emergencyTarget} className="group rounded-2xl border border-slate-200 bg-[#f8fafc] p-5 transition hover:-translate-y-1 hover:border-red-200 hover:shadow-xl"><span className={`grid h-12 w-12 place-items-center rounded-xl ${tone === "red" ? "bg-red-100 text-red-600" : tone === "blue" ? "bg-blue-100 text-blue-600" : tone === "amber" ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"}`}><Icon /></span><h3 className="mt-5 font-black">{label}</h3><p className="mt-2 min-h-12 text-sm leading-6 text-slate-500">{description}</p><span className="mt-5 flex items-center gap-1 text-sm font-black text-slate-700">Find support <ArrowRight size={15} /></span></Link>)}</div></div></section>
+      <section id="how-it-works" className="scroll-mt-20 px-4 py-20 md:px-10"><div className="mx-auto max-w-7xl"><Eyebrow>How LifeConnect works</Eyebrow><h2 className="max-w-2xl text-3xl font-black tracking-tight md:text-5xl">A clear path from need to response.</h2><div className="mt-12 grid gap-6 md:grid-cols-4">{[["01", "Select your emergency need", "Choose antivenom, blood, ambulance or ICU / bed."], ["02", "Share your location", "Allow location access so nearby options can be found."], ["03", "Find suitable hospitals", "Resource availability comes before proximity."], ["04", "Connect with support", "Hospitals and ambulances coordinate through the emergency workflow."]].map(([number, title, text]) => <div key={number} className="border-l-2 border-slate-200 pl-5 md:border-l-0 md:border-t-2 md:pl-0 md:pt-6"><span className="text-sm font-black text-red-600">{number}</span><h3 className="mt-3 text-lg font-black">{title}</h3><p className="mt-2 text-sm leading-6 text-slate-500">{text}</p></div>)}</div></div></section>
+      <section className="bg-slate-950 px-4 py-20 text-white md:px-10"><div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[.85fr_1.15fr] lg:items-center"><div><Eyebrow>Resource-aware hospital matching</Eyebrow><h2 className="text-3xl font-black tracking-tight md:text-5xl">Not just the nearest hospital. <span className="text-red-400">The right hospital.</span></h2><p className="mt-5 max-w-lg leading-7 text-slate-300">LifeConnect prioritizes hospitals based on the emergency resource you need, then considers proximity and emergency readiness. This is a product illustration, not a live hospital result.</p></div><div className="rounded-2xl border border-white/10 bg-white/[0.06] p-5 md:p-7"><div className="mb-6 flex items-center justify-between"><span className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Illustration · patient needs</span><span className="rounded-full bg-red-500/20 px-3 py-1 text-xs font-black text-red-300">ANTIVENOM</span></div><div className="space-y-3"><div className="flex items-center justify-between rounded-xl border border-red-400/50 bg-red-500/10 p-4"><div><div className="flex items-center gap-2 font-black"><Check size={17} className="text-emerald-300" />Hospital A</div><p className="mt-1 text-sm text-slate-400">8.0 km · Antivenom available · 8 units</p></div><span className="text-right text-xs font-black text-emerald-300">Recommended<br /><span className="font-normal text-slate-400">for this emergency</span></span></div><div className="flex items-center justify-between rounded-xl border border-white/10 p-4"><div><div className="flex items-center gap-2 font-black"><span className="text-red-400">×</span>Hospital B</div><p className="mt-1 text-sm text-slate-400">2.5 km · Antivenom unavailable</p></div><span className="text-xs font-bold text-slate-500">Closer, not suitable</span></div></div></div></div></section>
+      <section className="px-4 py-20 md:px-10"><div className="mx-auto max-w-7xl"><div className="flex flex-col justify-between gap-5 md:flex-row md:items-end"><div><Eyebrow>Emergency network</Eyebrow><h2 className="text-3xl font-black tracking-tight md:text-5xl">Capabilities that matter in a crisis.</h2></div><p className="max-w-md text-sm leading-6 text-slate-500">Patients can search across the resource signals hospitals already manage in LifeConnect.</p></div><div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">{capabilities.map(([Icon, label]) => <div key={label} className="rounded-xl border border-slate-200 bg-white p-4 text-center shadow-sm"><Icon className="mx-auto text-red-600" size={22} /><p className="mt-3 text-xs font-black text-slate-700">{label}</p></div>)}</div></div></section>
+      <section id="network" className="scroll-mt-20 border-y border-slate-200 bg-white px-4 py-20 md:px-10"><div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[.8fr_1.2fr] lg:items-center"><div><Eyebrow>Hospital network preview</Eyebrow><h2 className="text-3xl font-black tracking-tight md:text-5xl">See the network around the request.</h2><p className="mt-5 leading-7 text-slate-600">LifeConnect brings the patient location, hospitals and ambulance coordination into one view. The preview uses synthetic demo data and does not represent verified real-world availability.</p><div className="mt-7 flex items-center gap-4 text-xs font-bold text-slate-500"><span className="flex items-center gap-2"><span className="h-3 w-3 rounded-full bg-blue-500" />Patient</span><span className="flex items-center gap-2"><span className="h-3 w-3 rounded-full bg-red-500" />Hospital</span><span className="flex items-center gap-2"><span className="h-3 w-3 rounded-full bg-amber-400" />Ambulance</span></div></div><div className="relative h-80 overflow-hidden rounded-3xl border border-slate-200 bg-[#eef4f7] bg-[linear-gradient(rgba(15,23,42,.06)_1px,transparent_1px),linear-gradient(90deg,rgba(15,23,42,.06)_1px,transparent_1px)] bg-[size:42px_42px] shadow-inner"><div className="absolute left-[16%] top-[57%] h-40 w-40 rounded-full border border-red-300/60" /><div className="absolute left-[16%] top-[57%] h-24 w-24 rounded-full border border-red-300/60" /><div className="absolute left-[23%] top-[64%] h-4 w-4 rounded-full bg-blue-500 ring-8 ring-blue-500/15" /><div className="absolute left-[61%] top-[22%] grid h-12 w-12 place-items-center rounded-2xl bg-red-600 text-white"><Hospital size={23} /></div><div className="absolute left-[74%] top-[65%] grid h-11 w-11 place-items-center rounded-2xl bg-amber-400 text-slate-950"><Ambulance size={21} /></div><div className="absolute left-[31%] top-[61%] h-1 w-[35%] rotate-[-29deg] origin-left border-t-2 border-dashed border-red-400" /><div className="absolute bottom-4 left-4 rounded-lg bg-white/90 px-3 py-2 text-xs font-black text-slate-600 shadow-sm">Demo / synthetic hospital data</div></div></div></section>
+      <section className="px-4 py-20 md:px-10"><div className="mx-auto max-w-7xl"><div className="text-center"><Eyebrow>Real-time coordination</Eyebrow><h2 className="text-3xl font-black tracking-tight md:text-5xl">One request. Every responder aligned.</h2><p className="mx-auto mt-4 max-w-2xl text-slate-600">Socket.IO updates keep the emergency workflow moving between patients, hospitals and ambulances.</p></div><div className="mx-auto mt-12 grid max-w-5xl gap-3 md:grid-cols-5 md:items-center">{[[HeartPulse, "Patient"], [Radio, "Emergency request"], [Hospital, "Hospital"], [Ambulance, "Ambulance"], [Activity, "Coordination"]].map(([Icon, label]) => <div key={label} className="flex items-center gap-3 md:block md:text-center"><div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl border border-slate-200 bg-white text-red-600 shadow-sm"><Icon /></div><p className="font-black md:mt-3">{label}</p></div>)}</div><div className="mx-auto mt-10 grid max-w-4xl gap-3 text-center text-sm font-bold text-slate-500 md:grid-cols-4"><span>Hospital notifications</span><span>Hospital acceptance</span><span>Ambulance assignment</span><span>Live status updates</span></div></div></section>
+      <section className="border-y border-slate-200 bg-white px-4 py-20 md:px-10"><div className="mx-auto max-w-7xl"><Eyebrow>One platform, every role</Eyebrow><h2 className="text-3xl font-black tracking-tight md:text-5xl">Built for every role in an emergency.</h2><div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{roles.map(([Icon, title, description, path]) => <div key={title} className="rounded-2xl border border-slate-200 p-5"><Icon className="text-red-600" /><h3 className="mt-5 font-black">{title}</h3><p className="mt-2 min-h-12 text-sm leading-6 text-slate-500">{description}</p><Link to={user ? path : "/login"} className="mt-5 inline-flex items-center gap-1 text-sm font-black text-red-600">Open role <ArrowRight size={15} /></Link></div>)}</div></div></section>
+      <section className="px-4 py-20 md:px-10"><div className="mx-auto max-w-7xl"><Eyebrow>Demo access</Eyebrow><h2 className="text-3xl font-black tracking-tight md:text-5xl">Explore LifeConnect.</h2><p className="mt-3 text-slate-600">Try the platform from different emergency-response perspectives.</p><div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{demos.map(([Icon, title, description]) => <div key={title} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><Icon className="text-red-600" /><span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-black uppercase tracking-wider text-slate-500">Demo</span></div><h3 className="mt-5 font-black">{title}</h3><p className="mt-2 min-h-12 text-sm leading-6 text-slate-500">{description}</p><Link to="/login" className="mt-5 inline-flex items-center gap-1 rounded-lg bg-slate-900 px-3 py-2 text-xs font-black text-white">Open demo <ArrowRight size={14} /></Link></div>)}</div></div></section>
+      <section className="px-4 pb-20 md:px-10"><div className="mx-auto flex max-w-7xl flex-col justify-between gap-8 rounded-3xl bg-red-600 px-6 py-10 text-white shadow-xl shadow-red-600/20 md:flex-row md:items-center md:px-12"><div><p className="text-xs font-black uppercase tracking-[0.18em] text-red-100">Prepare before you need it</p><h2 className="mt-3 max-w-2xl text-3xl font-black tracking-tight md:text-4xl">Be prepared before an emergency happens.</h2><p className="mt-3 max-w-xl text-red-100">Set up your medical profile, emergency contacts and preferences so you can act faster when it matters.</p></div><div className="flex shrink-0 flex-wrap gap-3"><Link to="/register" className="rounded-xl bg-white px-5 py-3 font-black text-red-700">Create patient account</Link><Link to={emergencyTarget} className="rounded-xl border border-white/40 px-5 py-3 font-black text-white">Explore hospitals</Link></div></div></section>
+    </main>
+    <footer className="border-t border-slate-200 bg-white px-4 py-10 md:px-10"><div className="mx-auto flex max-w-7xl flex-col justify-between gap-8 md:flex-row"><div><Link to="/" className="flex items-center gap-2 font-black"><HeartPulse className="text-red-600" />LifeConnect</Link><p className="mt-2 text-sm text-slate-500">Medical Emergency Help</p></div><div className="flex flex-wrap gap-x-6 gap-y-3 text-sm font-bold text-slate-600"><a href="#resources">Emergency resources</a><a href="#how-it-works">How it works</a><a href="#network">Hospitals</a><Link to="/login">Login</Link><Link to="/register">Register</Link></div><p className="max-w-xs text-sm text-slate-500">Demo platform. Hospital and resource data are synthetic.</p></div></footer>
+  </div>;
 }

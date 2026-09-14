@@ -4,7 +4,7 @@ import Ambulance from '../models/Ambulance.js';
 import PatientProfile from '../models/PatientProfile.js';
 import EmergencyRequest from '../models/EmergencyRequest.js';
 import { haversineKm, toPoint } from '../utils/geo.js';
-import { calculateRankingValue } from './ranking.js';
+import { calculateRankingValue, hasCompatibleBlood } from './ranking.js';
 import { dijkstra, reconstructPath } from '../algorithms/dijkstra.js';
 import { AppError } from '../utils/errors.js';
 
@@ -16,18 +16,25 @@ export async function findRankedHospitals(lat, lng, radiusKm=25, requiredDepartm
   const rankedHospitals = hospitals.map(h => {
     const [hLng,hLat] = h.location.coordinates; const distanceKm = haversineKm({lat,lng},{lat:hLat,lng:hLng}); const ambulanceAvailable = (counts.get(String(h._id)) || 0) > 0;
     const { score: _legacyScore, rankingScore: _legacyRankingScore, hospitalScore: _legacyHospitalScore, ...hospital } = h;
-    return { ...hospital, distanceKm: Number(distanceKm.toFixed(2)), _rankingValue: calculateRankingValue({ distanceKm, hospital, ambulanceAvailable, requiredDepartment, emergencyType, requestedResources, bloodGroup }), ambulanceAvailable, bloodAvailable: bloodGroup ? Number(h.bloodBank?.[bloodGroup] || 0) > 0 : false };
+    return { ...hospital, distanceKm: Number(distanceKm.toFixed(2)), _rankingValue: calculateRankingValue({ distanceKm, hospital, ambulanceAvailable, requiredDepartment, emergencyType, requestedResources, bloodGroup }), ambulanceAvailable, bloodAvailable: bloodGroup ? hasCompatibleBlood(h.bloodBank, bloodGroup) : false };
   });
   return rankHospitals(rankedHospitals, requestedResources).map(({ _rankingValue, ...hospital }) => hospital);
 }
 
 export function rankHospitals(hospitals, requestedResources = []) {
-  const antivenomRequested = requestedResources.includes('ANTIVENOM');
+  const capabilityCount = hospital => requestedResources.reduce((score, resource) => score + Number({
+    ANTIVENOM: hospital.antivenomAvailable === true && Number(hospital.antivenomUnits) > 0,
+    BLOOD: hospital.bloodAvailable === true,
+    AMBULANCE: hospital.ambulanceAvailable === true,
+    ICU_BED: hospital.icuAvailable === true && Number(hospital.availableBeds) > 0,
+    ICU: hospital.icuAvailable === true,
+    BED: Number(hospital.availableBeds) > 0,
+    OXYGEN: hospital.oxygenAvailable === true
+  }[resource] || false), 0);
   return hospitals.sort((a, b) => {
-    if (antivenomRequested) {
-      const aHasAntivenom = a.antivenomAvailable === true && Number(a.antivenomUnits) > 0;
-      const bHasAntivenom = b.antivenomAvailable === true && Number(b.antivenomUnits) > 0;
-      if (aHasAntivenom !== bHasAntivenom) return bHasAntivenom - aHasAntivenom;
+    if (requestedResources.length) {
+      const capabilityDifference = capabilityCount(b) - capabilityCount(a);
+      if (capabilityDifference) return capabilityDifference;
       if (a.emergencyAvailable !== b.emergencyAvailable) return Number(b.emergencyAvailable) - Number(a.emergencyAvailable);
       return a.distanceKm - b.distanceKm || b._rankingValue - a._rankingValue;
     }

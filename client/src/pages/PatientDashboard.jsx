@@ -12,8 +12,10 @@ import {
   HeartPulse,
   Ambulance,
   Bed,
+  Activity,
   Droplets,
   ShieldPlus,
+  Wind,
   Plus,
   Pencil,
   Trash2,
@@ -24,7 +26,9 @@ const RESOURCE_OPTIONS = [
   { value: "ANTIVENOM", label: "Antivenom", icon: ShieldPlus },
   { value: "BLOOD", label: "Blood", icon: Droplets },
   { value: "AMBULANCE", label: "Ambulance", icon: Ambulance },
-  { value: "ICU_BED", label: "ICU / Bed", icon: Bed },
+  { value: "ICU", label: "ICU", icon: Activity },
+  { value: "BED", label: "Hospital Bed", icon: Bed },
+  { value: "OXYGEN", label: "Oxygen", icon: Wind },
 ];
 
 export default function PatientDashboard() {
