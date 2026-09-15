@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">LifeConnect medical icon</title>
+  <rect width="64" height="64" rx="14" fill="#dc2626"/>
+  <path fill="#fff" d="M24 12h16v12h12v16H40v12H24V40H12V24h12V12Z"/>
+</svg>
