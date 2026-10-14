@@ -1,2 +1,70 @@
-import {Link,useLocation,useNavigate} from 'react-router-dom'; import {LogOut,HeartPulse} from 'lucide-react'; import {useAuth} from '../context/AuthContext';
-export default function Layout({children}){const {user,logout}=useAuth();const nav=useNavigate();const location=useLocation();const labels={patient:'Patient',hospital:'Hospital',ambulance:'Ambulance',admin:'Admin'};const isHome=location.pathname==='/';return <div className="min-h-screen">{!isHome&&<header className="sticky top-0 z-20 border-b bg-white/95 backdrop-blur"><div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3"><Link to="/" className="flex items-center gap-2 font-black text-slate-900"><HeartPulse className="text-red-600"/> LifeConnect</Link><div className="flex items-center gap-3 text-sm"><span className="rounded-full bg-slate-100 px-3 py-1">{labels[user?.role]||'Guest'}</span>{user?<button onClick={()=>{logout();nav('/login')}} className="flex items-center gap-1 rounded-lg border px-3 py-2"><LogOut size={16}/> Logout</button>:null}</div></div></header>}<main className={isHome?'':'mx-auto max-w-7xl px-4 py-6'}>{children}</main></div>}
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { LogOut, HeartPulse } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+
+export default function Layout({ children }) {
+  const { user, logout } = useAuth();
+  const nav = useNavigate();
+  const location = useLocation();
+
+  const labels = {
+    patient: 'Patient',
+    hospital: 'Hospital',
+    ambulance: 'Ambulance',
+    admin: 'Admin',
+  };
+
+  const isHome = location.pathname === '/';
+
+  return (
+    <div className="min-h-screen">
+
+      {/* Header */}
+      {!isHome && (
+        <header className="sticky top-0 z-20 border-b bg-white/95 backdrop-blur">
+          <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
+
+            {/* Logo */}
+            <Link
+              to="/"
+              className="flex items-center gap-2 font-black text-slate-900"
+            >
+              <HeartPulse className="text-red-600" />
+              LifeConnect
+            </Link>
+
+            {/* Navigation Actions */}
+            <div className="flex items-center gap-3 text-sm">
+
+              {/* User Role */}
+              <span className="rounded-full bg-slate-100 px-3 py-1">
+                {labels[user?.role] || 'Guest'}
+              </span>
+
+              {/* Logout Button */}
+              {user && (
+                <button
+                  onClick={() => {
+                    logout();
+                    nav('/login');
+                  }}
+                  className="flex items-center gap-1 rounded-lg border px-3 py-2"
+                >
+                  <LogOut size={16} />
+                  Logout
+                </button>
+              )}
+
+            </div>
+          </div>
+        </header>
+      )}
+
+      {/* Main Content */}
+      <main className={isHome ? '' : 'mx-auto max-w-7xl px-4 py-6'}>
+        {children}
+      </main>
+
+    </div>
+  );
+}
